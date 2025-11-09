@@ -1,0 +1,295 @@
+Step 1: Update & install required packages
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y nodejs npm git nginx curl
+
+
+Optional: Check Node.js version
+
+node -v
+npm -v
+
+Step 2: Clone the Node.js app
+cd ~
+git clone https://github.com/benc-uk/nodejs-demoapp.git
+cd nodejs-demoapp/src
+
+Step 3: Install Node.js dependencies
+npm install
+
+
+This reads package.json inside src and installs all required modules.
+
+Step 4: Start the app locally (test)
+npm start
+
+
+Should print: Server running on port 3000
+
+Test with:
+
+curl http://localhost:3000
+
+Step 5: Install PM2 and run app in background
+sudo npm install -g pm2
+pm2 start server.mjs --name nodeapp
+pm2 save
+pm2 startup
+
+
+PM2 keeps the app running even after SSH disconnects.
+
+Confirm it’s running:
+
+pm2 list
+
+Step 6: Configure Nginx as reverse proxy
+
+Open Nginx default site config:
+
+sudo nano /etc/nginx/sites-available/default
+
+
+Replace contents with:
+
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+
+Replace yourdomain.com with your actual domain.
+
+Ensure port matches Node.js app port (3000).
+
+Test Nginx and reload:
+
+sudo nginx -t
+sudo systemctl restart nginx
+
+
+Now visiting http://<EC2_PUBLIC_IP> or http://yourdomain.com should show the Node.js app.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Step 1: Launch EC2 Instance (Ubuntu)
+
+Launch an EC2 instance with Ubuntu as the operating system.
+
+Step 2: SSH into EC2 Instance
+ssh -i "your-key.pem" ubuntu@<your-ec2-public-ip>
+
+Step 3: Install Node.js
+
+Install Node.js (v18.x) and npm:
+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+
+Verify Node.js and npm versions:
+
+node -v
+npm -v
+
+Step 4: Install Nginx
+
+Install Nginx:
+
+sudo apt update
+sudo apt install nginx -y
+
+
+Start Nginx service:
+
+sudo systemctl start nginx
+
+
+Ensure Nginx is enabled to start on boot:
+
+sudo systemctl enable nginx
+
+Step 5: Configure Security Group
+
+Ensure your EC2 Security Group allows inbound traffic on:
+
+Port 80 (HTTP)
+
+Port 443 (HTTPS)
+
+Port 3000 (for Node.js app)
+
+Step 6: Clone Node.js Demo App
+
+Navigate to the home directory:
+
+cd ~
+
+
+Clone the Node.js demo app:
+
+git clone https://github.com/benc-uk/nodejs-demoapp.git
+cd nodejs-demoapp/src
+
+Step 7: Install Dependencies
+
+Check for package.json inside the src folder:
+
+cd src
+
+
+Install app dependencies:
+
+npm install
+
+Step 8: Start Node.js App
+
+Start the Node.js app:
+
+node /root/nodejs-demoapp/src/server.mjs
+
+
+Verify the app is running on port 3000:
+
+netstat -tuln | grep 3000
+
+
+You should see something like:
+
+tcp6       0      0 :::3000                 :::*                    LISTEN
+
+Step 9: Configure Nginx Reverse Proxy
+
+Edit Nginx configuration file:
+
+sudo nano /etc/nginx/sites-available/default
+
+
+Replace the content with the following configuration:
+
+server {
+    listen 80;
+    server_name heheyum.co.in www.heheyum.co.in;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;  # Make sure your Node.js app is running on port 3000
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+
+Check for syntax errors:
+
+sudo nginx -t
+
+
+Restart Nginx to apply changes:
+
+sudo systemctl restart nginx
+
+Step 10: Allow Firewall Traffic on Ports 80 and 3000
+
+Allow traffic on port 80 (HTTP):
+
+sudo ufw allow 80/tcp
+
+
+Allow traffic on port 3000 (Node.js app):
+
+sudo ufw allow 3000/tcp
+
+
+Enable firewall (if it's not enabled yet):
+
+sudo ufw enable
+
+Step 11: Set Up Your Domain (GoDaddy)
+
+Log into GoDaddy and go to your domain's DNS settings.
+
+Create an A record:
+
+Host: @ (or www if you want the www subdomain too)
+
+Value: Your EC2 public IP (e.g., XX.XX.XX.XX).
+
+TTL: Set to 1 hour or the default.
+
+Step 12: Test the Application
+
+Check that your domain points to your EC2 instance:
+
+nslookup heheyum.co.in
+
+
+You should see the public IP of your EC2.
+
+Visit your domain (heheyum.co.in) in a browser:
+
+You should see the Node.js Demo app’s home page.
+
+Step 13: Troubleshooting
+
+Check if the Node.js app is running:
+
+netstat -tuln | grep 3000
+
+
+Check Nginx status:
+
+sudo systemctl status nginx
+
+
+Check Nginx error logs:
+
+sudo tail -f /var/log/nginx/error.log
+
+
+Ensure Nginx is configured correctly and restart if needed:
+
+sudo systemctl restart nginx
+
+Step 14: (Optional) Set Up SSL with Let's Encrypt
+
+Once everything is working, it's a good idea to secure your site with SSL (HTTPS). We can use Let’s Encrypt to get a free SSL certificate.
+
+Install Certbot:
+
+sudo apt install certbot python3-certbot-nginx -y
+
+
+Obtain an SSL certificate:
+
+sudo certbot --nginx -d heheyum.co.in -d www.heheyum.co.in
+
+
+Follow the prompts to get your SSL certificate installed.
+
+Test SSL by visiting https://heheyum.co.in.

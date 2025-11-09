@@ -1,0 +1,122 @@
+Docker Node.js App: Push & Pull Across Servers
+1️⃣ Build Docker Image on Local/Source Server
+cd ~/nodejs-demoapp/src
+# Make sure package.json and server.mjs are present here
+
+# Create Dockerfile
+nano Dockerfile
+
+
+Dockerfile content:
+
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+
+EXPOSE 3000
+CMD ["node", "server.mjs"]
+
+
+Build image:
+
+docker build -t nodejs-demoapp:latest .
+
+
+Check image:
+
+docker images
+
+2️⃣ Tag Docker Image for Docker Hub
+docker tag nodejs-demoapp:latest <your_dockerhub_username>/nodejs-demoapp:latest
+
+3️⃣ Push Docker Image to Docker Hub
+docker login   # Enter Docker Hub username & password
+docker push <your_dockerhub_username>/nodejs-demoapp:latest
+
+
+✅ Now image is stored on Docker Hub.
+
+4️⃣ Pull & Run Docker Image on Another Server
+
+On new EC2 / server:
+
+Install Docker:
+
+sudo yum update -y
+sudo amazon-linux-extras install docker -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+
+
+Login to Docker Hub:
+
+docker login
+
+
+Pull the image:
+
+docker pull <your_dockerhub_username>/nodejs-demoapp:latest
+
+
+Run the container:
+
+docker run -d -p 3000:3000 --name nodejs-app <your_dockerhub_username>/nodejs-demoapp:latest
+
+
+Check running container:
+
+docker ps
+docker logs nodejs-app
+
+
+✅ App is now running on port 3000.
+
+5️⃣ (Optional) Configure Nginx Reverse Proxy
+
+If you want users to access via http://yourdomain.com instead of :3000:
+
+Install Nginx:
+
+sudo yum install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+
+Nginx config (/etc/nginx/sites-available/default):
+
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+
+Enable & restart Nginx:
+
+sudo nginx -t
+sudo systemctl restart nginx
+
+
+✅ Now your app is accessible via http://yourdomain.com.
+
+6️⃣ Key Notes
+
+Docker encapsulates your app → portable anywhere Docker runs.
+
+Push to Docker Hub → central storage → can deploy on multiple servers.
+
+Nginx is optional but recommended for domain routing & SSL.
+
+Port mapping (-p 3000:3000) lets Docker expose the app, but Nginx lets users access it on port 80.

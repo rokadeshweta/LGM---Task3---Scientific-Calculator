@@ -1,0 +1,162 @@
+🐳 Full Deployment: Node.js App (Docker) + Nginx on EC2
+⚙️ Step 1: Update and Install Dependencies
+sudo apt update -y
+sudo apt install -y docker.io nginx
+sudo systemctl enable docker
+sudo systemctl start docker
+
+🧱 Step 2: Clone the Node.js Demo App
+cd ~
+git clone https://github.com/benc-uk/nodejs-demoapp.git
+cd nodejs-demoapp/src
+
+📦 Step 3: Create a Dockerfile
+
+Create a Dockerfile inside the src/ directory:
+
+nano Dockerfile
+
+
+Paste this content:
+
+# Use official Node.js image
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy dependency files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm install --production
+
+# Copy rest of the app
+COPY . .
+
+# Expose the port app runs on
+EXPOSE 3000
+
+# Start the app
+CMD ["node", "server.mjs"]
+
+
+Save and exit (Ctrl + O, Enter, Ctrl + X).
+
+🧰 Step 4: Build and Run Docker Container
+
+Build the image:
+
+sudo docker build -t nodejs-demoapp:latest .
+
+
+Run the container:
+
+sudo docker run -d --name nodejs-app -p 3000:3000 nodejs-demoapp:latest
+
+
+Verify it’s running:
+
+sudo docker ps
+
+
+You should see something like:
+
+CONTAINER ID   IMAGE                  COMMAND            PORTS                    NAMES
+abcd1234       nodejs-demoapp:latest  "node server.mjs"  0.0.0.0:3000->3000/tcp  nodejs-app
+
+🧠 Step 5: Test Docker App Internally
+
+Run:
+
+curl http://localhost:3000
+
+
+✅ You should get HTML output of the Node.js demo app.
+
+🌐 Step 6: Configure Nginx Reverse Proxy
+
+Create a new Nginx config file:
+
+sudo nano /etc/nginx/sites-available/nodeapp
+
+
+Paste this configuration:
+
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;  # Replace with your domain or EC2 public IP
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;   # Docker app runs on port 3000
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+
+Save and exit.
+
+🔗 Step 7: Enable the Site and Restart Nginx
+sudo ln -s /etc/nginx/sites-available/nodeapp /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+
+
+If everything is correct, you’ll see:
+
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+🔒 Step 8: Open Security Groups on AWS
+
+In your EC2 instance’s Security Group:
+
+Add inbound rule for:
+
+HTTP → Port 80 → 0.0.0.0/0
+
+(Optional) HTTPS → Port 443 → 0.0.0.0/0
+
+🌍 Step 9: Test in Browser
+
+If using public IP:
+
+http://<YOUR-EC2-PUBLIC-IP>
+
+
+If using a domain:
+
+http://your-domain.com
+
+
+✅ You should see the Node.js Demo App homepage!
+
+🧹 Step 10: (Optional) Manage Container
+
+To stop the container:
+
+sudo docker stop nodejs-app
+
+
+To remove container:
+
+sudo docker rm nodejs-app
+
+
+To rebuild after updates:
+
+sudo docker build -t nodejs-demoapp:latest .
+sudo docker run -d --name nodejs-app -p 3000:3000 nodejs-demoapp:latest
+
+🏁 Final Setup Summary
+Component	Purpose
+Docker	Runs your Node.js app in a container
+Port 3000	Internal port for the Node.js app
+Nginx (port 80)	Public reverse proxy that forwards requests to port 3000
+Security Group	Allows HTTP traffic from the internet
+Browser	Access your app using domain or EC2 IP

@@ -78,6 +78,9 @@ sudo systemctl restart nginx
 
 Now visiting http://<EC2_PUBLIC_IP> or http://yourdomain.com should show the Node.js app.
 
+REACT JS
+git clone https://github.com/aditya-sridhar/simple-reactjs-app.git
+
 
 
 
@@ -291,5 +294,6 @@ sudo certbot --nginx -d heheyum.co.in -d www.heheyum.co.in
 
 
 Follow the prompts to get your SSL certificate installed.
+
 
 Test SSL by visiting https://heheyum.co.in.
